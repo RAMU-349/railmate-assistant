@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RailMate Assistant</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f1f5f9;
+    color: #172033;
+}
+
+header {
+    background: linear-gradient(135deg, #123c69, #087f8c);
+    color: white;
+    padding: 28px 15px;
+    text-align: center;
+}
+
+header h1 { margin: 0 0 10px; }
+header p { margin: 0; }
+
+.container {
+    width: min(1100px, 94%);
+    margin: 25px auto;
+}
+
+.panel {
+    background: white;
+    padding: 22px;
+    margin-bottom: 22px;
+    border-radius: 14px;
+    box-shadow: 0 3px 12px #0000000d;
+}
+
+h2 { margin-top: 0; }
+
+.search-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+input, select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 15px;
+    background: white;
+}
+
+button {
+    border: none;
+    border-radius: 8px;
+    padding: 11px 15px;
+    background: #087f8c;
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+button:hover { background: #075e68; }
+.secondary { background: #475569; }
+
+.buttons, .quick-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin-top: 15px;
+}
+
+#status {
+    margin-top: 15px;
+    color: #475569;
+}
+
+.train-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.train-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 17px;
+    background: white;
+    overflow-wrap: anywhere;
+}
+
+.train-card h3 {
+    margin-top: 0;
+    color: #075985;
+}
+
+.train-card p {
+    margin: 9px 0;
+    line-height: 1.4;
+}
+
+.badge {
+    display: inline-block;
+    background: #e0f2fe;
+    color: #075985;
+    border-radius: 20px;
+    padding: 5px 9px;
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+
+.notice {
+    background: #fff7ed;
+    border-left: 4px solid #f59e0b;
+    padding: 13px;
+    margin-top: 18px;
+    line-height: 1.5;
+}
+
+.chat-window {
+    height: 350px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px;
+    background: #f8fafc;
+}
+
+.message {
+    margin-bottom: 14px;
+    padding: 12px;
+    border-radius: 10px;
+    max-width: 95%;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+}
+
+.bot {
+    background: #e0f2fe;
+    margin-right: auto;
+}
+
+.user {
+    background: #dcfce7;
+    margin-left: auto;
+}
+
+.chat-input-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.chat-input-row input {
+    flex: 1;
+    min-width: 0;
+}
+
+footer {
+    text-align: center;
+    padding: 22px;
+    color: #64748b;
+}
+
+@media (max-width: 800px) {
+    .train-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 550px) {
+    .search-grid, .train-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .chat-input-row {
+        flex-direction: column;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>🚆 RailMate Assistant</h1>
+    <p>Your Smart Indian Train Enquiry Companion</p>
+    <p style="margin-top:10px">
+        Search trains and ask our chatbot for help.
+    </p>
+</header>
+
+<main class="container">
+
+    <section class="panel">
+        <h2>🔎 Search Trains</h2>
+
+        <div class="search-grid">
+            <div>
+                <label for="fromStation">From Station</label>
+                <input id="fromStation" type="text"
+                       placeholder="e.g. Hyderabad">
+            </div>
+
+            <div>
+                <label for="toStation">To Station</label>
+                <input id="toStation" type="text"
+                       placeholder="e.g. Mumbai">
+            </div>
+
+            <div>
+                <label for="stateFilter">Destination State</label>
+                <select id="stateFilter">
+                    <option value="">All States</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="trainSearch">Train Number or Name</label>
+                <input id="trainSearch" type="text"
+                       placeholder="e.g. 12702 or Hussainsagar">
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button id="searchButton">Search Trains</button>
+            <button id="showAllButton" class="secondary">
+                Show All Trains
+            </button>
+        </div>
+
+        <p id="status" role="status">Connecting to AWS...</p>
+    </section>
+
+    <section class="panel">
+        <h2>🚆 Available Sample Trains</h2>
+        <div id="trainResults" class="train-grid"></div>
+
+        <div class="notice">
+            <strong>Demo notice:</strong>
+            This project displays sample train records stored in DynamoDB.
+            Train routes, timings, and fares are not verified official railway
+            information. Check official railway sources before travelling.
+        </div>
+    </section>
+
+    <section class="panel">
+        <h2>🤖 Chat with RailMate</h2>
+
+        <p>
+            Ask about train numbers, routes, destinations, and sample records
+            available in our database.
+        </p>
+
+        <div id="chatWindow" class="chat-window" aria-live="polite"></div>
+
+        <div class="chat-input-row">
+            <input id="chatInput" type="text"
+                   placeholder="Ask: Trains from Hyderabad to Mumbai"
+                   aria-label="Ask RailMate a question">
+            <button id="sendButton">Send</button>
+        </div>
+
+        <div class="quick-buttons">
+            <button class="quick"
+                data-question="Trains from Hyderabad to Mumbai">
+                Hyderabad to Mumbai
+            </button>
+
+            <button class="quick" data-question="Trains to Bengaluru">
+                Trains to Bengaluru
+            </button>
+
+            <button class="quick" data-question="Trains in Maharashtra">
+                Trains in Maharashtra
+            </button>
+
+            <button class="quick" data-question="Train 12702">
+                Train 12702
+            </button>
+
+            <button class="quick" data-question="Show all trains">
+                Show All Trains
+            </button>
+        </div>
+    </section>
+
+</main>
+
+<footer>
+    RailMate Assistant | AWS Lambda + API Gateway + DynamoDB
+    <br><br>
+    Academic Demonstration Project
+</footer>
+
+<script>
+"use strict";
+
+const API_URL =
+    "https://6yo3y5i6gd.execute-api.ap-south-1.amazonaws.com/trains";
+
+let allTrains = [];
+
+function getField(train, keys) {
+    for (const key of keys) {
+        const value = train[key];
+
+        if (value !== undefined && value !== null &&
+            String(value).trim() !== "") {
+            return String(value).trim();
+        }
+    }
+
+    return "";
+}
+
+function getTrainNumber(train) {
+    return getField(train, ["trainNo", "trainNumber", "number"]);
+}
+
+function getTrainName(train) {
+    return getField(train, ["trainName", "name"]);
+}
+
+function getOrigin(train) {
+    return getField(train, ["origin", "source", "from", "fromStation"]);
+}
+
+function getDestination(train) {
+    return getField(train, [
+        "dest", "destination", "to",
+        "toStation", "destinationStation"
+    ]);
+}
+
+function getState(train) {
+    return getField(train, ["state", "destinationState"]);
+}
+
+function getDeparture(train) {
+    return getField(train, ["time", "departure", "departureTime"]);
+}
+
+function getFare(train) {
+    return getField(train, ["price", "fare", "ticketPrice"]);
+}
+
+function normalise(value) {
+    return String(value || "")
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, " ")
+        .replace(/\s+/g, " ");
+}
+
+function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[char]);
+}
+
+function formatTrain(train) {
+    const fare = getFare(train);
+
+    return [
+        getTrainName(train) || "Unnamed Train",
+        "(" + (getTrainNumber(train) || "Number unavailable") + ")",
+        "From: " + (getOrigin(train) || "Not available"),
+        "To: " + (getDestination(train) || "Not available"),
+        "State: " + (getState(train) || "Not available"),
+        "Departure: " + (getDeparture(train) || "Not available"),
+        "Sample fare: " + (fare ? "₹" + fare : "Not available")
+    ].join("\n");
+}
+
+function displayTrains(trains) {
+    const container = document.getElementById("trainResults");
+    container.replaceChildren();
+
+    if (!trains.length) {
+        container.textContent = "No matching sample trains found.";
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
+
+    trains.forEach(train => {
+        const card = document.createElement("article");
+        card.className = "train-card";
+
+        const name = escapeHTML(
+            getTrainName(train) || "Unnamed Train"
+        );
+
+        const number = escapeHTML(
+            getTrainNumber(train) || "Not available"
+        );
+
+        const origin = escapeHTML(
+            getOrigin(train) || "Not available"
+        );
+
+        const destination = escapeHTML(
+            getDestination(train) || "Not available"
+        );
+
+        const state = escapeHTML(
+            getState(train) || "Not available"
+        );
+
+        const time = escapeHTML(
+            getDeparture(train) || "Not available"
+        );
+
+        const fare = getFare(train);
+        const formattedFare = fare
+            ? "₹" + escapeHTML(fare)
+            : "Not available";
+
+        card.innerHTML = `
+            <span class="badge">Sample Train</span>
+            <h3>${name}</h3>
+            <p><strong>Train Number:</strong> ${number}</p>
+            <p><strong>From:</strong> ${origin}</p>
+            <p><strong>To:</strong> ${destination}</p>
+            <p><strong>Destination State:</strong> ${state}</p>
+            <p><strong>Departure:</strong> ${time}</p>
+            <p><strong>Sample Fare:</strong> ${formattedFare}</p>
+        `;
+
+        fragment.appendChild(card);
+    });
+
+    container.appendChild(fragment);
+}
+
+function populateStates() {
+    const select = document.getElementById("stateFilter");
+    const previousValue = select.value;
+
+    const states = [...new Set(
+        allTrains.map(getState).filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b));
+
+    select.replaceChildren(new Option("All States", ""));
+
+    states.forEach(state => {
+        select.add(new Option(state, state));
+    });
+
+    if (states.includes(previousValue)) {
+        select.value = previousValue;
+    }
+}
+
+function searchTrains() {
+    const origin = normalise(
+        document.getElementById("fromStation").value
+    );
+
+    const destination = normalise(
+        document.getElementById("toStation").value
+    );
+
+    const state = normalise(
+        document.getElementById("stateFilter").value
+    );
+
+    const query = normalise(
+        document.getElementById("trainSearch").value
+    );
+
+    const results = allTrains.filter(train => {
+        const trainOrigin = normalise(getOrigin(train));
+        const trainDestination = normalise(getDestination(train));
+        const trainState = normalise(getState(train));
+        const trainName = normalise(getTrainName(train));
+        const trainNumber = normalise(getTrainNumber(train));
+
+        return (!origin || trainOrigin.includes(origin)) &&
+               (!destination || trainDestination.includes(destination)) &&
+               (!state || trainState === state) &&
+               (!query ||
+                trainName.includes(query) ||
+                trainNumber.includes(query) ||
+                trainOrigin.includes(query) ||
+                trainDestination.includes(query));
+    });
+
+    displayTrains(results);
+
+    document.getElementById("status").textContent =
+        `${results.length} matching sample train record(s) found.`;
+}
+
+function addMessage(text, sender) {
+    const chatWindow = document.getElementById("chatWindow");
+    const message = document.createElement("div");
+
+    message.className = "message " + sender;
+    message.textContent = text;
+
+    chatWindow.appendChild(message);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+function findStationMatches(station, stationGetter) {
+    const wanted = normalise(station);
+
+    if (!wanted) return [];
+
+    return allTrains.filter(train =>
+        normalise(stationGetter(train)).includes(wanted)
+    );
+}
+
+function answerQuestion(rawQuestion) {
+    const question = normalise(rawQuestion);
+
+    if (!question) {
+        return "Please type a question about a sample train.";
+    }
+
+    if ([
+        "show all trains",
+        "all trains",
+        "list all trains"
+    ].includes(question)) {
+        displayTrains(allTrains);
+
+        document.getElementById("status").textContent =
+            `${allTrains.length} sample train record(s) found.`;
+
+        return `Here are all ${allTrains.length} sample train records.`;
+    }
+
+    const numberMatch = question.match(/\b\d{4,6}\b/);
+
+    if (numberMatch) {
+        const number = numberMatch[0];
+
+        const matches = allTrains.filter(train =>
+            getTrainNumber(train) === number
+        );
+
+        if (matches.length) {
+            displayTrains(matches);
+            return matches.map(formatTrain).join("\n\n");
+        }
+
+        return `No sample train with number ${number} was found.`;
+    }
+
+    const stateQuestion = question.match(
+        /^(?:trains?|railways?)\s+(?:in|within|of)\s+(.+)$/
+    );
+
+    if (stateQuestion) {
+        const requestedState = normalise(stateQuestion[1]);
+
+        const matches = allTrains.filter(train =>
+            normalise(getState(train)) === requestedState
+        );
+
+        displayTrains(matches);
+
+        return matches.length
+            ? `I found ${matches.length} matching sample train record(s):\n\n` +
+              matches.map(formatTrain).join("\n\n")
+            : `No sample trains were found for ${stateQuestion[1]}.`;
+    }
+
+    const routeMatch =
+        question.match(/^(?:trains?\s+)?from\s+(.+?)\s+to\s+(.+)$/) ||
+        question.match(/^(?!trains?\s+to\s)(.+?)\s+to\s+(.+)$/);
+
+    if (routeMatch) {
+        const from = normalise(routeMatch[1]);
+        const to = normalise(routeMatch[2]);
+
+        const matches = allTrains.filter(train =>
+            normalise(getOrigin(train)) === from &&
+            normalise(getDestination(train)) === to
+        );
+
+        if (matches.length) {
+            displayTrains(matches);
+
+            return `I found ${matches.length} matching sample train record(s):\n\n` +
+                matches.map(formatTrain).join("\n\n");
+        }
+
+        const knownOrigin = allTrains.some(train =>
+            normalise(getOrigin(train)) === from
+        );
+
+        const knownDestination = allTrains.some(train =>
+            normalise(getDestination(train)) === to
+        );
+
+        if (knownOrigin && knownDestination) {
+            displayTrains([]);
+
+            return `No matching sample trains were found from ${routeMatch[1]} to ${routeMatch[2]}.`;
+        }
+    }
+
+    const destinationMatch = question.match(
+        /^(?:trains?|railways?)\s+(?:going\s+)?to\s+(.+)$/
+    );
+
+    if (destinationMatch) {
+        const matches = findStationMatches(
+            destinationMatch[1],
+            getDestination
+        );
+
+        displayTrains(matches);
+
+        return matches.length
+            ? `I found ${matches.length} matching sample train record(s):\n\n` +
+              matches.map(formatTrain).join("\n\n")
+            : `No sample trains were found going to ${destinationMatch[1]}.`;
+    }
+
+    const originMatch = question.match(
+        /^(?:trains?|railways?)\s+from\s+(.+)$/
+    );
+
+    if (originMatch) {
+        const matches = findStationMatches(
+            originMatch[1],
+            getOrigin
+        );
+
+        displayTrains(matches);
+
+        return matches.length
+            ? `I found ${matches.length} matching sample train record(s):\n\n` +
+              matches.map(formatTrain).join("\n\n")
+            : `No sample trains were found departing from ${originMatch[1]}.`;
+    }
+
+    const nameMatches = allTrains.filter(train =>
+        normalise(getTrainName(train)).includes(question)
+    );
+
+    if (nameMatches.length) {
+        displayTrains(nameMatches);
+        return nameMatches.map(formatTrain).join("\n\n");
+    }
+
+    return "Sorry, I couldn't understand that question. Try:\n" +
+        "• Trains from Hyderabad to Mumbai\n" +
+        "• Trains to Bengaluru\n" +
+        "• Trains in Maharashtra\n" +
+        "• Trains from Hyderabad\n" +
+        "• Train 12702\n" +
+        "• Show all trains";
+}
+
+function sendQuestion(question) {
+    const input = document.getElementById("chatInput");
+    const value = (question ?? input.value).trim();
+
+    if (!value) return;
+
+    addMessage(value, "user");
+    input.value = "";
+
+    const loadingMessage = document.createElement("div");
+    loadingMessage.className = "message bot";
+    loadingMessage.textContent = "Searching sample train records...";
+
+    const chatWindow = document.getElementById("chatWindow");
+    chatWindow.appendChild(loadingMessage);
+
+    setTimeout(() => {
+        const answer = answerQuestion(value);
+        loadingMessage.remove();
+        addMessage(answer, "bot");
+    }, 150);
+}
+
+async function loadTrains() {
+    const status = document.getElementById("status");
+
+    status.textContent = "Loading sample trains from AWS...";
+
+    try {
+        const response = await fetch(API_URL, {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (Array.isArray(data)) {
+            allTrains = data;
+        } else if (Array.isArray(data.trains)) {
+            allTrains = data.trains;
+        } else if (Array.isArray(data.Items)) {
+            allTrains = data.Items;
+        } else {
+            throw new Error(
+                "The API response did not contain a train array."
+            );
+        }
+
+        populateStates();
+        displayTrains(allTrains);
+
+        status.textContent =
+            `${allTrains.length} sample train record(s) found.`;
+
+        addMessage(
+            "Hi! 👋 I'm RailMate Assistant. I can search the sample train records connected to your AWS backend. Try asking: 'Trains from Hyderabad to Mumbai'.",
+            "bot"
+        );
+
+    } catch (error) {
+        console.error("Unable to load trains:", error);
+
+        status.textContent =
+            "Unable to load trains from AWS. Check the API and browser console.";
+
+        addMessage(
+            "I couldn't load the train records from AWS. The browser could not retrieve the API response. Check the browser console and API Gateway CORS settings.",
+            "bot"
+        );
+    }
+}
+
+document.getElementById("searchButton")
+    .addEventListener("click", searchTrains);
+
+document.getElementById("showAllButton")
+    .addEventListener("click", () => {
+        document.getElementById("fromStation").value = "";
+        document.getElementById("toStation").value = "";
+        document.getElementById("stateFilter").value = "";
+        document.getElementById("trainSearch").value = "";
+
+        displayTrains(allTrains);
+
+        document.getElementById("status").textContent =
+            `${allTrains.length} sample train record(s) found.`;
+    });
+
+document.getElementById("sendButton")
+    .addEventListener("click", () => sendQuestion());
+
+document.getElementById("chatInput")
+    .addEventListener("keydown", event => {
+        if (event.key === "Enter") {
+            sendQuestion();
+        }
+    });
+
+document.querySelectorAll(".quick").forEach(button => {
+    button.addEventListener("click", () => {
+        sendQuestion(button.dataset.question);
+    });
+});
+
+loadTrains();
+</script>
+
+</body>
+</html>
